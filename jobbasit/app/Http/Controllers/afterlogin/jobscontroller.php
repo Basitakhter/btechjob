@@ -13,9 +13,9 @@ class jobscontroller extends Controller
     public function index()
     {
         //
-        return view('afterlogin.jobs.job');
+        return view('afterlogin.jobs.jobs');
     }
-
+ 
     /**
      * Show the form for creating a new resource.
      */

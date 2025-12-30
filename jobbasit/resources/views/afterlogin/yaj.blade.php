@@ -1,5 +1,5 @@
 @extends('layouts.header')
 @section('title','Your Availibe Jobs')
 @section('content')
-<h2>Your Availibe Jobs</h2>
+<h2>Your Appliaed Jobs</h2>
 @endsection

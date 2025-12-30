@@ -591,7 +591,7 @@
         
         <div class="contact-form-container">
             <form class="contact-form" id="contactForm">
-                @csrf
+                
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label" for="name">Full Name *</label>
