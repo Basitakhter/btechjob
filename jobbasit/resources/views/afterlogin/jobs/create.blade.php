@@ -1,7 +1,21 @@
 @extends('layouts.header')
 @section('title','Create New Job')
-@section('content')
-
+@section('content')  <!-- Add this line -->
+<div class="container-fluid">
+    <!-- Flash Messages -->
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <strong>Success!</strong> {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+    @if(session('error'))
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <strong>Error!</strong> {{ session('error') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
@@ -506,17 +520,21 @@
             gap: 15px;
         }
         
-        .company-exists-logo {
-            width: 50px;
-            height: 50px;
-            border-radius: 8px;
-            background: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--primary);
-            font-size: 1.2rem;
-            overflow: hidden;
+                .company-exists-logo {
+        width: 100px;
+        height: 100px;
+        border-radius: 8px;
+        background: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden; /* IMPORTANT */
+        }
+
+        .company-exists-logo img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain; /* shows full image */
         }
         
         .company-exists-name {
@@ -617,8 +635,7 @@
             opacity: 1;
         }
     </style>
-</head>
-<body>
+
     <div class="job-container">
         <div class="card">
             <div class="card-header">
@@ -627,12 +644,12 @@
             <div class="card-body">
                 <!-- Step Indicator -->
                 <div class="step-indicator">
-                    <div class="step completed" id="step1">
+                    <div class="step {{ Auth::user()->company ? 'completed' : 'active' }}" id="step1">
                         <div class="step-number">1</div>
                         <div class="step-text">Company</div>
                         <div class="step-line"></div>
                     </div>
-                    <div class="step active" id="step2">
+                    <div class="step {{ Auth::user()->company ? 'active' : '' }}" id="step2">
                         <div class="step-number">2</div>
                         <div class="step-text">Job Details</div>
                         <div class="step-line"></div>
@@ -643,23 +660,42 @@
                     </div>
                 </div>
                 
-                <!-- Company Section (Step 1) -->
+                <!-- Company Section (Step 1) - Only show if user doesn't have company -->
+                @if(!Auth::user()->company)
                 <div class="form-section active" id="companySection">
                     <!-- Company Check -->
                     <div id="companyCheckArea">
-                        <!-- This will be filled dynamically -->
+                        <div class="no-company-card">
+                            <div class="no-company-icon">
+                                <i class="fas fa-building"></i>
+                            </div>
+                            <h3 class="no-company-title">Company Profile Required</h3>
+                            <p class="no-company-text">
+                                Before posting jobs, you need to create a company profile. 
+                                This helps job seekers learn about your organization and builds trust.
+                            </p>
+                            <button class="btn btn-primary" onclick="createNewCompany()">
+                                <i class="fas fa-plus"></i> Create Company Profile
+                            </button>
+                        </div>
                     </div>
                     
-                    <!-- Company Form -->
+                    <!-- Company Form (Hidden by default) -->
                     <div id="companyForm" style="display: none;">
                         <div class="form-title">
                             <i class="fas fa-building me-2"></i>Create Your Company Profile
                         </div>
                         
-                        <form id="companyFormData">
+                        <form id="companyFormData" action="{{ route('create.company') }}" method="POST" enctype="multipart/form-data">
+                            @csrf
+                            <input type="hidden" name="from_job_create" value="1">
+
                             <div class="form-group">
                                 <label class="form-label">Company Name <span class="required">*</span></label>
-                                <input type="text" class="form-control" id="companyName" required>
+                                <input type="text" class="form-control" name="name" id="companyName" required value="{{ old('name') }}">
+                                @error('name')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
                             </div>
                             
                             <div class="form-group">
@@ -669,122 +705,189 @@
                                         <i class="fas fa-building"></i>
                                     </div>
                                     <p>Drag and drop your logo or</p>
-                                    <input type="file" id="logoUpload" class="d-none" accept="image/*" onchange="previewLogo(event)">
+                                    <input type="file" id="logoUpload" name="logo" class="d-none" accept="image/*" onchange="previewLogo(event)">
                                     <button type="button" class="btn btn-secondary" onclick="document.getElementById('logoUpload').click()">
                                         <i class="fas fa-upload"></i> Upload Logo
                                     </button>
                                     <p class="text-muted mt-2">Recommended: 400x400px, PNG or JPG (Max 2MB)</p>
+                                    @error('logo')
+                                        <div class="text-danger mt-1">{{ $message }}</div>
+                                    @enderror
                                 </div>
                             </div>
                             
                             <div class="form-group">
                                 <label class="form-label">Company Tagline</label>
-                                <input type="text" class="form-control" id="companyTagline" placeholder="Brief description of your company">
+                                <input type="text" class="form-control" id="companyTagline" name="company_tagline" placeholder="Brief description of your company" value="{{ old('company_tagline') }}">
                             </div>
                             
                             <div class="form-group">
                                 <label class="form-label">Company Description <span class="required">*</span></label>
-                                <textarea class="form-control" id="companyDescription" rows="4" required placeholder="Tell us about your company"></textarea>
+                                <textarea class="form-control" id="companyDescription" name="description" rows="4" required placeholder="Tell us about your company">{{ old('description') }}</textarea>
+                                @error('description')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
                             </div>
                             
                             <div class="form-row">
                                 <div class="form-group">
                                     <label class="form-label">Industry <span class="required">*</span></label>
-                                    <select class="form-select" id="companyIndustry" required>
+                                    <select class="form-select" name="industry" id="companyIndustry" required>
                                         <option value="">Select Industry</option>
-                                        <option value="Technology">Technology</option>
-                                        <option value="Finance">Finance</option>
-                                        <option value="Healthcare">Healthcare</option>
-                                        <option value="Education">Education</option>
-                                        <option value="Retail">Retail</option>
-                                        <option value="Manufacturing">Manufacturing</option>
-                                        <option value="Real Estate">Real Estate</option>
-                                        <option value="Hospitality">Hospitality</option>
-                                        <option value="Other">Other</option>
+                                        <option value="Technology" {{ old('industry') == 'Technology' ? 'selected' : '' }}>Technology</option>
+                                        <option value="Finance" {{ old('industry') == 'Finance' ? 'selected' : '' }}>Finance</option>
+                                        <option value="Healthcare" {{ old('industry') == 'Healthcare' ? 'selected' : '' }}>Healthcare</option>
+                                        <option value="Education" {{ old('industry') == 'Education' ? 'selected' : '' }}>Education</option>
+                                        <option value="Retail" {{ old('industry') == 'Retail' ? 'selected' : '' }}>Retail</option>
+                                        <option value="Manufacturing" {{ old('industry') == 'Manufacturing' ? 'selected' : '' }}>Manufacturing</option>
+                                        <option value="Real Estate" {{ old('industry') == 'Real Estate' ? 'selected' : '' }}>Real Estate</option>
+                                        <option value="Hospitality" {{ old('industry') == 'Hospitality' ? 'selected' : '' }}>Hospitality</option>
+                                        <option value="Other" {{ old('industry') == 'Other' ? 'selected' : '' }}>Other</option>
                                     </select>
+                                    @error('industry')
+                                        <div class="text-danger mt-1">{{ $message }}</div>
+                                    @enderror
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label">Company Size <span class="required">*</span></label>
-                                    <select class="form-select" id="companySize" required>
+                                    <select class="form-select" name="size" id="companySize" required>
                                         <option value="">Select Size</option>
-                                        <option value="1-10">1-10 employees</option>
-                                        <option value="11-50">11-50 employees</option>
-                                        <option value="51-200">51-200 employees</option>
-                                        <option value="201-500">201-500 employees</option>
-                                        <option value="501-1000">501-1000 employees</option>
-                                        <option value="1000+">1000+ employees</option>
+                                        <option value="1-10" {{ old('size') == '1-10' ? 'selected' : '' }}>1-10 employees</option>
+                                        <option value="11-50" {{ old('size') == '11-50' ? 'selected' : '' }}>11-50 employees</option>
+                                        <option value="51-200" {{ old('size') == '51-200' ? 'selected' : '' }}>51-200 employees</option>
+                                        <option value="201-500" {{ old('size') == '201-500' ? 'selected' : '' }}>201-500 employees</option>
+                                        <option value="501-1000" {{ old('size') == '501-1000' ? 'selected' : '' }}>501-1000 employees</option>
+                                        <option value="1000+" {{ old('size') == '1000+' ? 'selected' : '' }}>1000+ employees</option>
                                     </select>
+                                    @error('size')
+                                        <div class="text-danger mt-1">{{ $message }}</div>
+                                    @enderror
                                 </div>
                             </div>
                             
                             <div class="form-group">
                                 <label class="form-label">Website</label>
-                                <input type="url" class="form-control" id="companyWebsite" placeholder="https://example.com">
+                                <input type="url" class="form-control" id="companyWebsite" name="website" placeholder="https://example.com" value="{{ old('website') }}">
+                                @error('website')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
                             </div>
                             
                             <div class="form-group">
                                 <label class="form-label">Location <span class="required">*</span></label>
-                                <input type="text" class="form-control" id="companyLocation" required placeholder="City, Country">
+                                <input type="text" class="form-control" id="companyLocation" name="location" required placeholder="City, Country" value="{{ old('location') }}">
+                                @error('location')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
                             </div>
                             
                             <div class="form-group">
                                 <label class="form-label">Contact Email <span class="required">*</span></label>
-                                <input type="email" class="form-control" id="companyEmail" required>
+                                <input type="email" class="form-control" name="email" id="companyEmail" required value="{{ old('email', Auth::user()->email) }}">
+                                @error('email')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
                             </div>
                             
                             <div class="form-group">
                                 <label class="form-label">Contact Phone</label>
-                                <input type="tel" class="form-control" id="companyPhone">
+                                <input type="tel" class="form-control" name="contact" id="companyPhone" value="{{ old('contact') }}">
+                                @error('contact')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
                             </div>
                             
                             <div class="form-actions">
                                 <button type="button" class="btn btn-secondary" onclick="cancelCompany()">Cancel</button>
-                                <button type="button" class="btn btn-primary" onclick="saveCompany()">
+                                <button type="submit" class="btn btn-primary">
                                     <i class="fas fa-save"></i> Save Company & Continue
                                 </button>
                             </div>
                         </form>
                     </div>
                 </div>
-                
-                <!-- Job Details Section (Step 2) -->
-                <div class="form-section" id="jobDetailsSection">
+                @endif
+
+                <!-- Job Details Section (Step 2) - Show if user has company -->
+                <div class="form-section {{ Auth::user()->company ? 'active' : '' }}" id="jobDetailsSection">
                     <div class="form-title">
                         <i class="fas fa-briefcase me-2"></i>Job Details
                     </div>
                     
-                    <form id="jobForm">
+                    @if(Auth::user()->company)
+                    <div class="company-exists">
+                        <div class="company-exists-info">
+                            <div class="company-exists-logo">
+                                @if(Auth::user()->company->logo)
+                                    <img src="{{ asset('storage/' . Auth::user()->company->logo) }}" alt="{{ Auth::user()->company->name }}">
+                                @else
+                                    <i class="fas fa-building"></i>
+                                @endif
+                            </div>
+                            <div>
+                                <div class="company-exists-name">
+                                    {{ Auth::user()->company->name }}
+                                </div>
+                                <div class="text-muted">
+                                    {{ Auth::user()->company->location }}
+                                    <p class="company-description mb-0 fs-6">
+                                        {{ \Illuminate\Support\Str::limit(Auth::user()->company->description, 200) }}
+                                    </p>
+                                    <p><small> <i class="fa fa-clock-o"></i> {{ Auth::user()->company->created_at->diffForHumans() }}</small></p>
+                                </div>
+                            </div>
+                        </div>
+                        <a href="{{ route('company.edit', Auth::user()->company->id) }}" class="company-exists-edit">
+        <i                  class="fas fa-edit"></i> Edit
+                        </a>
+                    </div>
+                    @endif
+                    
+                    <form id="jobForm" action="{{ route('jobs.store') }}" method="POST">
+                        @csrf
                         <div class="form-group">
                             <label class="form-label">Job Title <span class="required">*</span></label>
-                            <input type="text" class="form-control" id="jobTitle" required placeholder="e.g., Senior Software Engineer">
+                            <input type="text" class="form-control" name="job_title" id="jobTitle" required placeholder="e.g., Senior Software Engineer" value="{{ old('job_title') }}">
+                            @error('job_title')
+                                <div class="text-danger mt-1">{{ $message }}</div>
+                            @enderror
                         </div>
                         
                         <div class="form-group">
                             <label class="form-label">Job Type <span class="required">*</span></label>
                             <div class="form-row">
-                                <select class="form-select" id="jobType" required>
+                                <select class="form-select" name="job_type" id="jobType" required>
                                     <option value="">Select Type</option>
-                                    <option value="Full-time">Full-time</option>
-                                    <option value="Part-time">Part-time</option>
-                                    <option value="Contract">Contract</option>
-                                    <option value="Internship">Internship</option>
-                                    <option value="Remote">Remote</option>
+                                    <option value="Full-time" {{ old('job_type') == 'Full-time' ? 'selected' : '' }}>Full-time</option>
+                                    <option value="Part-time" {{ old('job_type') == 'Part-time' ? 'selected' : '' }}>Part-time</option>
+                                    <option value="Contract" {{ old('job_type') == 'Contract' ? 'selected' : '' }}>Contract</option>
+                                    <option value="Internship" {{ old('job_type') == 'Internship' ? 'selected' : '' }}>Internship</option>
+                                    <option value="Remote" {{ old('job_type') == 'Remote' ? 'selected' : '' }}>Remote</option>
                                 </select>
+                                @error('job_type')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
                                 
-                                <select class="form-select" id="jobExperience" required>
+                                <select class="form-select" name="experience" id="jobExperience" required>
                                     <option value="">Experience Level</option>
-                                    <option value="Entry Level">Entry Level</option>
-                                    <option value="Mid Level">Mid Level</option>
-                                    <option value="Senior Level">Senior Level</option>
-                                    <option value="Lead">Lead</option>
-                                    <option value="Director">Director</option>
+                                    <option value="Entry Level" {{ old('experience') == 'Entry Level' ? 'selected' : '' }}>Entry Level</option>
+                                    <option value="Mid Level" {{ old('experience') == 'Mid Level' ? 'selected' : '' }}>Mid Level</option>
+                                    <option value="Senior Level" {{ old('experience') == 'Senior Level' ? 'selected' : '' }}>Senior Level</option>
+                                    <option value="Lead" {{ old('experience') == 'Lead' ? 'selected' : '' }}>Lead</option>
+                                    <option value="Director" {{ old('experience') == 'Director' ? 'selected' : '' }}>Director</option>
                                 </select>
+                                @error('experience')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
                             </div>
                         </div>
                         
                         <div class="form-group">
                             <label class="form-label">Job Description <span class="required">*</span></label>
-                            <textarea class="form-control" id="jobDescription" rows="6" required placeholder="Describe the role, responsibilities, and expectations"></textarea>
+                            <textarea class="form-control" id="jobDescription" name="description" rows="6" required placeholder="Describe the role, responsibilities, and expectations">{{ old('description') }}</textarea>
+                            @error('description')
+                                <div class="text-danger mt-1">{{ $message }}</div>
+                            @enderror
                         </div>
                         
                         <div class="form-group">
@@ -794,23 +897,26 @@
                                     <span class="tooltiptext">Enter each requirement on a new line. Use bullet points or simple sentences.</span>
                                 </span>
                             </label>
-                            <textarea class="form-control" id="jobRequirements" rows="4" required placeholder="• Minimum 3 years of experience
+                            <textarea class="form-control" id="jobRequirements" name="requirements" rows="4" required placeholder="• Minimum 3 years of experience
 • Proficiency in JavaScript
-• Strong communication skills"></textarea>
+• Strong communication skills">{{ old('requirements') }}</textarea>
+                            @error('requirements')
+                                <div class="text-danger mt-1">{{ $message }}</div>
+                            @enderror
                         </div>
                         
                         <div class="form-row">
                             <div class="form-group">
                                 <label class="form-label">Salary Range (per year)</label>
                                 <div class="form-row">
-                                    <input type="number" class="form-control" id="salaryMin" placeholder="Min" min="0">
-                                    <input type="number" class="form-control" id="salaryMax" placeholder="Max" min="0">
-                                    <select class="form-select" id="salaryCurrency">
-                                        <option value="USD">USD</option>
-                                        <option value="EUR">EUR</option>
-                                        <option value="GBP">GBP</option>
-                                        <option value="INR">INR</option>
-                                        <option value="PKR">PKR</option>
+                                    <input type="number" class="form-control" name="salary_min" id="salaryMin" placeholder="Min" min="0" value="{{ old('salary_min') }}">
+                                    <input type="number" class="form-control" name="salary_max" id="salaryMax" placeholder="Max" min="0" value="{{ old('salary_max') }}">
+                                    <select class="form-select" name="salary_currency" id="salaryCurrency">
+                                        <option value="USD" {{ old('salary_currency') == 'USD' ? 'selected' : '' }}>USD</option>
+                                        <option value="EUR" {{ old('salary_currency') == 'EUR' ? 'selected' : '' }}>EUR</option>
+                                        <option value="GBP" {{ old('salary_currency') == 'GBP' ? 'selected' : '' }}>GBP</option>
+                                        <option value="INR" {{ old('salary_currency') == 'INR' ? 'selected' : '' }}>INR</option>
+                                        <option value="PKR" {{ old('salary_currency') == 'PKR' ? 'selected' : '' }}>PKR</option>
                                     </select>
                                 </div>
                             </div>
@@ -819,26 +925,38 @@
                         <div class="form-row">
                             <div class="form-group">
                                 <label class="form-label">Location <span class="required">*</span></label>
-                                <input type="text" class="form-control" id="jobLocation" required value="San Francisco, CA">
+                                <input type="text" class="form-control" name="location" id="jobLocation" required value="{{ old('location', Auth::user()->company ? Auth::user()->company->location : '') }}">
+                                @error('location')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Work Setup</label>
-                                <select class="form-select" id="workSetup">
-                                    <option value="On-site">On-site</option>
-                                    <option value="Remote">Remote</option>
-                                    <option value="Hybrid">Hybrid</option>
+                                <select class="form-select" name="work_setup" id="workSetup">
+                                    <option value="On-site" {{ old('work_setup') == 'On-site' ? 'selected' : '' }}>On-site</option>
+                                    <option value="Remote" {{ old('work_setup') == 'Remote' ? 'selected' : '' }}>Remote</option>
+                                    <option value="Hybrid" {{ old('work_setup') == 'Hybrid' ? 'selected' : '' }}>Hybrid</option>
                                 </select>
+                                @error('work_setup')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
                             </div>
                         </div>
                         
                         <div class="form-row">
                             <div class="form-group">
                                 <label class="form-label">Application Deadline</label>
-                                <input type="date" class="form-control" id="applicationDeadline">
+                                <input type="date" class="form-control" name="application_deadline" id="applicationDeadline" value="{{ old('application_deadline') }}">
+                                @error('application_deadline')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Number of Vacancies</label>
-                                <input type="number" class="form-control" id="vacancies" min="1" value="1">
+                                <input type="number" class="form-control" name="vacancies" id="vacancies" min="1" value="{{ old('vacancies', 1) }}">
+                                @error('vacancies')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
                             </div>
                         </div>
                         
@@ -849,23 +967,34 @@
                                     <span class="tooltiptext">List the benefits you offer (health insurance, remote work, etc.)</span>
                                 </span>
                             </label>
-                            <textarea class="form-control" id="jobBenefits" rows="3" placeholder="• Health insurance
+                            <textarea class="form-control" id="jobBenefits" rows="3" name="benefits" placeholder="• Health insurance
 • Flexible work hours
 • Professional development
-• Paid time off"></textarea>
+• Paid time off">{{ old('benefits') }}</textarea>
+                            @error('benefits')
+                                <div class="text-danger mt-1">{{ $message }}</div>
+                            @enderror
                         </div>
                         
                         <div class="form-group">
                             <label class="form-label">Application Instructions</label>
-                            <textarea class="form-control" id="applicationInstructions" rows="3" placeholder="How should candidates apply?"></textarea>
+                            <textarea class="form-control" id="applicationInstructions" rows="3" name="instructions" placeholder="How should candidates apply?">{{ old('instructions') }}</textarea>
+                            @error('instructions')
+                                <div class="text-danger mt-1">{{ $message }}</div>
+                            @enderror
                         </div>
                         
                         <div class="form-actions">
+                            @if(!Auth::user()->company)
                             <button type="button" class="btn btn-secondary" onclick="previousStep()">
                                 <i class="fas fa-arrow-left"></i> Back
                             </button>
+                            @endif
                             <button type="button" class="btn btn-primary" onclick="previewJob()">
                                 <i class="fas fa-eye"></i> Preview & Continue
+                            </button>
+                            <button type="submit" class="btn btn-success" id="submitJobBtn" style="display: none;">
+                                <i class="fas fa-paper-plane"></i> Post Job Now
                             </button>
                         </div>
                     </form>
@@ -878,21 +1007,56 @@
                     </div>
                     
                     <!-- Company Preview -->
-                    <div class="company-preview">
-                        <div class="company-header">
-                            <div class="company-logo" id="previewCompanyLogo">
-                                <i class="fas fa-building"></i>
-                            </div>
-                            <div class="company-info">
-                                <h4 id="previewCompanyName">Your Company</h4>
-                                <p id="previewCompanyTagline">Company tagline will appear here</p>
-                            </div>
-                        </div>
+                     
+                    @if(Auth::user()->company)
+    <div class="company-preview company-exists">
+        <div class="company-exists-info d-flex gap-3">
+            
+            <div class="company-exists-logo">
+                @if(Auth::user()->company->logo)
+                    <img src="{{ asset('storage/' . Auth::user()->company->logo) }}"
+                         alt="{{ Auth::user()->company->name }}">
+                @else
+                    <i class="fas fa-building"></i>
+                @endif
+            </div>
+
+            <div class="company-info">
+                <div class="company-exists-name">
+                    {{ Auth::user()->company->name }}
+                </div>
+
+                <div class="text-muted">
+                    {{ Auth::user()->company->location }}
+
+                    <p class="company-description mb-0 fs-6">
+                        {{ \Illuminate\Support\Str::limit(Auth::user()->company->description, 200) }}
+                    </p>
+
+                    <p class="mb-0">
+                        <small>
+                            <i class="fa fa-clock-o"></i>
+                            {{ Auth::user()->company->created_at->diffForHumans() }}
+                        </small>
+                    </p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+@else
+    <div class="company-preview text-center text-muted">
+        <i class="fas fa-building fs-2 mb-2"></i>
+        <p>Your company details will appear here</p>
+    </div>
+@endif
+                        @if(Auth::user()->company)
                         <div class="edit-company-btn">
-                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="editCompanyFromPreview()">
+                            <a href="" class="btn btn-outline-primary btn-sm">
                                 <i class="fas fa-edit"></i> Edit Company
-                            </button>
+                            </a>
                         </div>
+                        @endif
                     </div>
                     
                     <!-- Job Preview -->
@@ -904,7 +1068,7 @@
                         <button type="button" class="btn btn-secondary" onclick="previousStep()">
                             <i class="fas fa-arrow-left"></i> Back
                         </button>
-                        <button type="button" class="btn btn-success" onclick="postJob()">
+                        <button type="button" class="btn btn-success" onclick="submitJobForm()">
                             <i class="fas fa-paper-plane"></i> Post Job Now
                         </button>
                     </div>
@@ -913,7 +1077,7 @@
         </div>
     </div>
     
-    <!-- Edit Company Modal -->
+    <!-- Edit Company Modal (for JS functionality) -->
     <div class="modal-overlay" id="editCompanyModal">
         <div class="modal-content">
             <div class="modal-header">
@@ -948,82 +1112,38 @@
     <script>
         // Application state
         let appState = {
-            company: null, // null means no company exists
-            currentStep: 1,
+            company: @json(Auth::user()->company ?: null),
+            currentStep: {{ Auth::user()->company ? 2 : 1 }},
             jobData: {},
-            hasCompany: false // Check if user already has a company
+            hasCompany: {{ Auth::user()->company ? 'true' : 'false' }}
         };
 
         // Initialize the application
         document.addEventListener('DOMContentLoaded', function() {
-            checkCompanyStatus();
+            // Set default deadline to 30 days from now
+            const today = new Date();
+            const nextMonth = new Date(today);
+            nextMonth.setDate(today.getDate() + 30);
+            
+            const deadlineInput = document.getElementById('applicationDeadline');
+            if (deadlineInput && !deadlineInput.value) {
+                deadlineInput.min = today.toISOString().split('T')[0];
+                deadlineInput.value = nextMonth.toISOString().split('T')[0];
+            }
+            
+            // If user has company, set company location as default job location
+            if (appState.company && appState.company.location) {
+                const jobLocation = document.getElementById('jobLocation');
+                if (jobLocation && !jobLocation.value) {
+                    jobLocation.value = appState.company.location;
+                }
+            }
         });
 
-        // Check if user already has a company
-        function checkCompanyStatus() {
-            // Simulate API call to check company status
-            setTimeout(() => {
-                // For demo: Check localStorage or simulate server response
-                const savedCompany = localStorage.getItem('userCompany');
-                
-                if (savedCompany) {
-                    appState.company = JSON.parse(savedCompany);
-                    appState.hasCompany = true;
-                    showCompanyExists();
-                } else {
-                    appState.hasCompany = false;
-                    showNoCompany();
-                }
-            }, 500);
-        }
-
-        // Show "No Company" screen
+        // Show "No Company" screen functions
         function showNoCompany() {
-            const companyCheckArea = document.getElementById('companyCheckArea');
-            companyCheckArea.innerHTML = `
-                <div class="no-company-card">
-                    <div class="no-company-icon">
-                        <i class="fas fa-building"></i>
-                    </div>
-                    <h3 class="no-company-title">Company Profile Required</h3>
-                    <p class="no-company-text">
-                        Before posting jobs, you need to create a company profile. 
-                        This helps job seekers learn about your organization and builds trust.
-                    </p>
-                    <button class="btn btn-primary" onclick="createNewCompany()">
-                        <i class="fas fa-plus"></i> Create Company Profile
-                    </button>
-                </div>
-            `;
-        }
-
-        // Show existing company
-        function showCompanyExists() {
-            const companyCheckArea = document.getElementById('companyCheckArea');
-            companyCheckArea.innerHTML = `
-                <div class="company-exists">
-                    <div class="company-exists-info">
-                        <div class="company-exists-logo" id="existingCompanyLogo">
-                            ${appState.company.logo ? 
-                                `<img src="${appState.company.logo}" alt="${appState.company.name}">` : 
-                                `<i class="fas fa-building"></i>`
-                            }
-                        </div>
-                        <div>
-                            <div class="company-exists-name">${appState.company.name}</div>
-                            <div class="text-muted">${appState.company.location}</div>
-                        </div>
-                    </div>
-                    <a href="#" class="company-exists-edit" onclick="editCompany()">
-                        <i class="fas fa-edit"></i> Edit
-                    </a>
-                </div>
-                <div class="text-center mt-3">
-                    <button class="btn btn-primary" onclick="goToJobDetails()">
-                        <i class="fas fa-arrow-right"></i> Continue to Job Details
-                    </button>
-                </div>
-            `;
+            document.getElementById('companyCheckArea').style.display = 'block';
+            document.getElementById('companyForm').style.display = 'none';
         }
 
         // Create new company
@@ -1034,8 +1154,7 @@
 
         // Cancel company creation
         function cancelCompany() {
-            document.getElementById('companyCheckArea').style.display = 'block';
-            document.getElementById('companyForm').style.display = 'none';
+            showNoCompany();
             document.getElementById('companyFormData').reset();
         }
 
@@ -1050,45 +1169,6 @@
                 };
                 reader.readAsDataURL(file);
             }
-        }
-
-        // Save company
-        function saveCompany() {
-            // Get form values
-            const companyData = {
-                id: Date.now(), // Generate unique ID
-                name: document.getElementById('companyName').value,
-                tagline: document.getElementById('companyTagline').value,
-                description: document.getElementById('companyDescription').value,
-                industry: document.getElementById('companyIndustry').value,
-                size: document.getElementById('companySize').value,
-                website: document.getElementById('companyWebsite').value,
-                location: document.getElementById('companyLocation').value,
-                email: document.getElementById('companyEmail').value,
-                phone: document.getElementById('companyPhone').value,
-                logo: getLogoPreview(),
-                createdAt: new Date().toISOString()
-            };
-
-            // Validate required fields
-            if (!companyData.name || !companyData.description || !companyData.industry || 
-                !companyData.size || !companyData.location || !companyData.email) {
-                alert('Please fill in all required fields.');
-                return;
-            }
-
-            // Save company data
-            appState.company = companyData;
-            appState.hasCompany = true;
-            
-            // Save to localStorage (in real app, send to server)
-            localStorage.setItem('userCompany', JSON.stringify(companyData));
-            
-            // Show success message
-            alert('Company profile created successfully!');
-            
-            // Go to job details
-            goToJobDetails();
         }
 
         // Get logo preview
@@ -1108,15 +1188,12 @@
             document.getElementById('companySection').classList.remove('active');
             document.getElementById('jobDetailsSection').classList.add('active');
             
-            // Set company location as default job location
-            if (appState.company && appState.company.location) {
-                document.getElementById('jobLocation').value = appState.company.location;
-            }
+            appState.currentStep = 2;
         }
 
         // Go to previous step
         function previousStep() {
-            if (appState.currentStep === 2) {
+            if (appState.currentStep === 2 && !appState.hasCompany) {
                 // Go back to company section
                 appState.currentStep = 1;
                 document.getElementById('step2').classList.remove('active');
@@ -1138,12 +1215,8 @@
 
         // Edit company
         function editCompany() {
-            document.getElementById('editCompanyName').value = appState.company.name;
-            document.getElementById('editCompanyTagline').value = appState.company.tagline || '';
-            document.getElementById('editCompanyDescription').value = appState.company.description;
-            document.getElementById('editCompanyLocation').value = appState.company.location;
-            
-            document.getElementById('editCompanyModal').style.display = 'block';
+            // This would be handled by Laravel route
+            window.location.href = "";
         }
 
         // Close edit modal
@@ -1153,29 +1226,31 @@
 
         // Save company edits
         function saveCompanyEdit() {
-            // Update company data
-            appState.company.name = document.getElementById('editCompanyName').value;
-            appState.company.tagline = document.getElementById('editCompanyTagline').value;
-            appState.company.description = document.getElementById('editCompanyDescription').value;
-            appState.company.location = document.getElementById('editCompanyLocation').value;
-            
-            // Save to localStorage
-            localStorage.setItem('userCompany', JSON.stringify(appState.company));
-            
-            // Close modal and refresh display
+            // This would be handled by Laravel route
             closeEditModal();
-            showCompanyExists();
-            
-            alert('Company details updated successfully!');
-        }
-
-        // Edit company from preview
-        function editCompanyFromPreview() {
-            editCompany();
         }
 
         // Preview job
         function previewJob() {
+            // Validate required fields
+            const requiredFields = ['jobTitle', 'jobType', 'jobExperience', 'jobDescription', 'jobRequirements', 'jobLocation'];
+            let isValid = true;
+            
+            requiredFields.forEach(fieldId => {
+                const field = document.getElementById(fieldId);
+                if (field && !field.value.trim()) {
+                    isValid = false;
+                    field.classList.add('is-invalid');
+                } else if (field) {
+                    field.classList.remove('is-invalid');
+                }
+            });
+            
+            if (!isValid) {
+                alert('Please fill in all required fields marked with *.');
+                return;
+            }
+            
             // Collect job data
             const jobData = {
                 title: document.getElementById('jobTitle').value,
@@ -1183,26 +1258,17 @@
                 experience: document.getElementById('jobExperience').value,
                 description: document.getElementById('jobDescription').value,
                 requirements: document.getElementById('jobRequirements').value,
-                salary: {
-                    min: document.getElementById('salaryMin').value,
-                    max: document.getElementById('salaryMax').value,
-                    currency: document.getElementById('salaryCurrency').value
-                },
+                salary_min: document.getElementById('salaryMin').value,
+                salary_max: document.getElementById('salaryMax').value,
+                salary_currency: document.getElementById('salaryCurrency').value,
                 location: document.getElementById('jobLocation').value,
-                workSetup: document.getElementById('workSetup').value,
+                work_setup: document.getElementById('workSetup').value,
                 deadline: document.getElementById('applicationDeadline').value,
                 vacancies: document.getElementById('vacancies').value,
                 benefits: document.getElementById('jobBenefits').value,
                 instructions: document.getElementById('applicationInstructions').value,
                 postedDate: new Date().toLocaleDateString()
             };
-
-            // Validate required fields
-            if (!jobData.title || !jobData.type || !jobData.experience || 
-                !jobData.description || !jobData.requirements || !jobData.location) {
-                alert('Please fill in all required fields.');
-                return;
-            }
 
             appState.jobData = jobData;
             
@@ -1216,28 +1282,23 @@
             
             document.getElementById('jobDetailsSection').classList.remove('active');
             document.getElementById('previewSection').classList.add('active');
+            
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         // Update job preview
         function updatePreview() {
-            // Update company preview
-            document.getElementById('previewCompanyName').textContent = appState.company.name;
-            document.getElementById('previewCompanyTagline').textContent = appState.company.tagline || '';
-            
-            const previewLogo = document.getElementById('previewCompanyLogo');
-            if (appState.company.logo) {
-                previewLogo.innerHTML = `<img src="${appState.company.logo}" style="width: 100%; height: 100%; object-fit: cover;">`;
-            } else {
-                previewLogo.innerHTML = '<i class="fas fa-building"></i>';
-            }
-            
-            // Generate job preview
             const job = appState.jobData;
+            const company = appState.company;
+            
             let salaryText = '';
-            if (job.salary.min && job.salary.max) {
-                salaryText = `${job.salary.min} - ${job.salary.max} ${job.salary.currency}/year`;
-            } else if (job.salary.min) {
-                salaryText = `From ${job.salary.min} ${job.salary.currency}/year`;
+            if (job.salary_min && job.salary_max) {
+                salaryText = `${job.salary_min} - ${job.salary_max} ${job.salary_currency}/year`;
+            } else if (job.salary_min) {
+                salaryText = `From ${job.salary_min} ${job.salary_currency}/year`;
+            } else if (job.salary_max) {
+                salaryText = `Up to ${job.salary_max} ${job.salary_currency}/year`;
             }
             
             // Format requirements as list
@@ -1254,7 +1315,7 @@
             
             // Format benefits if present
             let benefitsHTML = '';
-            if (job.benefits) {
+            if (job.benefits && job.benefits.trim()) {
                 const benefitsList = job.benefits.split('\n')
                     .filter(benefit => benefit.trim())
                     .map(benefit => {
@@ -1275,12 +1336,24 @@
                 `;
             }
             
+            // Format deadline if present
+            let deadlineHTML = '';
+            if (job.deadline) {
+                const deadlineDate = new Date(job.deadline);
+                deadlineHTML = `
+                    <div class="meta-item">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>Apply by ${deadlineDate.toLocaleDateString()}</span>
+                    </div>
+                `;
+            }
+            
             const jobPreview = document.getElementById('jobPreviewContent');
             jobPreview.innerHTML = `
                 <div class="job-header">
                     <div>
                         <div class="job-title">${job.title}</div>
-                        <div class="job-company">${appState.company.name}</div>
+                        <div class="job-company">${company ? company.name : 'Your Company'}</div>
                     </div>
                     ${salaryText ? `<div class="salary-tag">${salaryText}</div>` : ''}
                 </div>
@@ -1300,7 +1373,7 @@
                     </div>
                     <div class="meta-item">
                         <i class="fas fa-home"></i>
-                        <span>${job.workSetup}</span>
+                        <span>${job.work_setup}</span>
                     </div>
                     ${job.vacancies > 1 ? `
                         <div class="meta-item">
@@ -1308,12 +1381,7 @@
                             <span>${job.vacancies} openings</span>
                         </div>
                     ` : ''}
-                    ${job.deadline ? `
-                        <div class="meta-item">
-                            <i class="fas fa-calendar-alt"></i>
-                            <span>Apply by ${new Date(job.deadline).toLocaleDateString()}</span>
-                        </div>
-                    ` : ''}
+                    ${deadlineHTML}
                 </div>
                 
                 <div class="job-section">
@@ -1330,65 +1398,45 @@
                 
                 ${benefitsHTML}
                 
-                ${job.instructions ? `
+                ${job.instructions && job.instructions.trim() ? `
                     <div class="job-section">
                         <div class="section-title">How to Apply</div>
                         <div class="job-description">${job.instructions.replace(/\n/g, '<br>')}</div>
                     </div>
                 ` : ''}
                 
-                <div class="job-section">
-                    <div class="section-title">About ${appState.company.name}</div>
-                    <div class="job-description">${appState.company.description}</div>
-                </div>
+                ${company && company.description ? `
+                    <div class="job-section">
+                        <div class="section-title">About ${company.name}</div>
+                        <div class="job-description">${company.description}</div>
+                    </div>
+                ` : ''}
             `;
         }
 
-        // Post job
-        function postJob() {
-            // In a real app, send jobData to server
-            console.log('Posting job:', appState.jobData);
-            
-            // Generate job ID
-            const jobId = Date.now();
-            
-            // Save job to localStorage (simulating database)
-            const savedJobs = JSON.parse(localStorage.getItem('userJobs') || '[]');
-            const jobToSave = {
-                id: jobId,
-                ...appState.jobData,
-                company: appState.company,
-                status: 'active',
-                createdAt: new Date().toISOString(),
-                applications: 0,
-                views: 0
-            };
-            
-            savedJobs.push(jobToSave);
-            localStorage.setItem('userJobs', JSON.stringify(savedJobs));
-            
-            // Show success message
-            alert('Job posted successfully!');
-            
-            // Redirect to jobs page or dashboard
-            setTimeout(() => {
-                window.location.href = 'dashboard.html'; // Change to your actual dashboard URL
-            }, 1500);
+        // Submit job form
+        function submitJobForm() {
+            document.getElementById('jobForm').submit();
         }
 
         // Add form validation
         document.querySelectorAll('form').forEach(form => {
             form.addEventListener('submit', function(e) {
-                e.preventDefault();
+                // Basic validation can be added here
+                // The main validation will be done by Laravel
             });
         });
 
-        // Set default deadline to 30 days from now
-        const today = new Date();
-        const nextMonth = new Date(today);
-        nextMonth.setDate(today.getDate() + 30);
-        document.getElementById('applicationDeadline').min = today.toISOString().split('T')[0];
-        document.getElementById('applicationDeadline').value = nextMonth.toISOString().split('T')[0];
+        // Add validation styles to invalid fields
+        document.querySelectorAll('.form-control, .form-select').forEach(field => {
+            field.addEventListener('blur', function() {
+                if (!this.value.trim() && this.hasAttribute('required')) {
+                    this.classList.add('is-invalid');
+                } else {
+                    this.classList.remove('is-invalid');
+                }
+            });
+        });
     </script>
 
 @endsection

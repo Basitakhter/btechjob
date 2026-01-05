@@ -24,4 +24,9 @@ Route::get('/profile',[afterloginController::class,'profile'])->name('user.profi
 Route::get('/settings', [afterloginController::class,'settings'])->name('user.settings');
 Route::get('/your-applied-jobs',[afterloginController::class,'yaj'])->name('user.yaj');
 Route::resource('/jobs',jobsController::class);
+Route::post('/jobs', [jobsController::class, 'store'])->name('jobs.store');
+Route::get('/jobs', [jobsController::class, 'index'])->name('jobs.index');
+Route::post('/create-company',[jobsController::class,'create_company'])->name('create.company');
+Route::get('/company/{company}/edit', [jobsController::class, 'edit'])->name('company.edit');
+Route::put('/company/{company}', [jobsController::class, 'update'])->name('company.update');
 });

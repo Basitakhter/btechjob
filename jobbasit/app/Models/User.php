@@ -6,7 +6,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use App\Models\Company;
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
@@ -45,4 +46,16 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+    // relatable user with company
+    public function company(): HasOne
+    {
+        return $this->hasOne(company::class);
+    }
+   //
+    public function vacancy()
+    {
+        return $this->hasMany(vacancy::class);
+    }
 }
+
+
