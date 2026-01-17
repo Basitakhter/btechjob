@@ -13,9 +13,9 @@
                 <i class="fas fa-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
                 <input type="text" class="form-control ps-5" id="searchInput" placeholder="Search jobs by title, company...">
             </div>
-            <button class="btn btn-primary d-flex align-items-center" onclick="createNewJob()">
-                <i class="fas fa-plus me-2"></i> Post New Job
-            </button>
+            <a href="{{ route('jobs.create') }}" class="btn btn-primary d-flex align-items-center">
+    <i class="fas fa-plus me-2"></i> Post New Job
+</a>
         </div>
     </div>
     
@@ -69,7 +69,7 @@
                         <i class="fas fa-pause-circle fs-4"></i>
                     </div>
                     <div>
-                        <h2 class="mb-0 fw-bold">{{ Auth::user()->vacancy()->where('status', 'draft')->count() }}</h2>
+                        <h2 class="mb-0 fw-bold">{{ Auth::user()->vacancy()->where('status', '2')->count() }}</h2>
                         <p class="text-muted mb-0">Draft Jobs</p>
                     </div>
                 </div>
@@ -85,7 +85,7 @@
                         <i class="fas fa-stop-circle fs-4"></i>
                     </div>
                     <div>
-                        <h2 class="mb-0 fw-bold">{{ Auth::user()->vacancy()->where('status', 'closed')->count() }}</h2>
+                        <h2 class="mb-0 fw-bold">{{ Auth::user()->vacancy()->where('status', '1')->count() }}</h2>
                         <p class="text-muted mb-0">Closed Jobs</p>
                     </div>
                 </div>
@@ -240,16 +240,16 @@
                         <h5 class="card-title mb-1 fw-bold">{{ $vacancy->job_title }}</h5>
                         <div class="d-flex align-items-center gap-3 flex-wrap">
                             <span class="text-primary fw-medium">
-                                <i class="fas fa-building me-1"></i> {{ $vacancy->company_name ?? 'Tech Solutions Inc.' }}
+                                <i class="fas fa-building me-1"></i> {{ Auth::user()->company->name }}
                             </span>
                             <span class="badge bg-primary">{{ $vacancy->employment_type }}</span>
                             <span class="text-muted">
                                 <i class="fas fa-chart-line me-1"></i> {{ $experienceLevel }}
                             </span>
-                            <span class="badge bg-{{ $statusClass }}" style="font-size: 0.75rem; padding: 0.25rem 0.75rem;">
-                                <i class="fas fa-circle me-1" style="font-size: 0.6rem;"></i> 
-                                {{ ucfirst($vacancy->status) }}
-                            </span>
+                            <span class="badge {{ $vacancy->status == 0 ? 'bg-success text-white' : ($vacancy->status == 1 ? 'bg-danger text-white' : 'bg-secondary text-white') }} fs-9 py-0.5 px-2">
+    <i class="fas fa-circle me-0.5" style="font-size: 0.3rem;"></i> 
+    {{ $vacancy->status == 0 ? 'Active' : ($vacancy->status == 1 ? 'Close' : ucfirst($vacancy->status)) }}
+</span>
                         </div>
                     </div>
                     <div class="text-end">
@@ -312,12 +312,16 @@
                 </div>
                 
                 <div class="d-flex gap-2 flex-wrap">
+                    <a href="{{ route('jobs.show',$vacancy->id) }}">
                     <button class="btn btn-primary btn-sm" style="min-width: 120px;" onclick="viewJob({{ $vacancy->id }})">
                         <i class="fas fa-eye me-1"></i> View Details
                     </button>
-                    <button class="btn btn-outline-primary btn-sm" style="min-width: 120px;" onclick="editJob({{ $vacancy->id }})">
+                    </a>
+                    <a href="{{ route('jobs.edit', $vacancy->id)}}">
+                        <button class="btn btn-outline-primary btn-sm" style="min-width: 120px;" onclick="editJob({{ $vacancy->id }})">
                         <i class="fas fa-edit me-1"></i> Edit
                     </button>
+                    </a>
                     <button class="btn btn-outline-secondary btn-sm" style="min-width: 120px;" onclick="quickActions({{ $vacancy->id }}, '{{ addslashes($vacancy->title) }}')">
                         <i class="fas fa-cog me-1"></i> Quick Actions
                     </button>
@@ -374,43 +378,33 @@
     </div>
 </div>
 
-<!-- Create a separate modal for each job -->
-@foreach($vacancies as $vacancy)
-<div class="modal fade" id="deleteModal{{ $vacancy->id }}" tabindex="-1">
-<div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title" id="deleteModalLabel{{ $vacancy->id }}">Delete Job</h5>
-                <button type="button" class="btn btn-danger btn-sm" 
-                        data-bs-toggle="modal" 
-                        data-bs-target="#deleteModal{{ $vacancy->id }}">
-                    Delete
-                </button>
-            </div>
-            <form method="post" action="{{ route('jobs.destroy', $vacancy->id) }}" id="deleteForm{{ $vacancy->id }}">
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+                    <form id="deleteForm" method="POST">      
                 @csrf
-                @method('DELETE')
+            @method('DELETE')
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">Delete Job</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
                 <div class="modal-body">
                     <div class="text-center mb-4">
-                        <i class="fas fa-exclamation-triangle fa-3x text-danger" aria-hidden="true"></i>
+                        <i class="fas fa-exclamation-triangle fa-3x text-danger"></i>
                     </div>
                     <h4 class="text-center mb-3">Are you sure?</h4>
-                    <p class="text-center text-muted">Delete "{{ $vacancy->title }}"?</p>
+                    <p class="text-center text-muted" id="deleteJobTitle"></p>
                     <p class="text-center text-muted mb-0">This action cannot be undone.</p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-danger btn-sm" 
-                            data-bs-toggle="modal" 
-                            data-bs-target="#deleteModal{{ $vacancy->id }}">
-                        Delete
-                    </button>
+                    <button type="submit" class="btn btn-danger">Delete Job</button>
                 </div>
-            </form>
-        </div>
+            </div>
+        </form>
     </div>
 </div>
-@endforeach
 
 <!-- Quick Actions Modal -->
 <div class="modal fade" id="quickActionsModal" tabindex="-1">
@@ -418,47 +412,63 @@
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title" id="quickActionsTitle">Quick Actions</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
+<button onclick="quickActions({{ $vacancy->id }}, '{{ $vacancy->title }}')" 
+        class="btn btn-sm btn-outline-primary">
+    <i class="fas fa-ellipsis-h"></i> Actions
+</button>            </div>
+
             <div class="modal-body">
                 <p class="text-muted mb-4">Choose an action for this job posting:</p>
-                
+
                 <div class="d-flex flex-column gap-3">
-                    <button class="btn btn-outline-success text-start" onclick="changeStatus('active')">
-                        <i class="fas fa-play me-2"></i>
-                        <div>
-                            <strong>Activate Job</strong>
-                            <p class="text-muted mb-0">Make this job visible to candidates</p>
+                    <!-- Activate Job → status = 0 -->
+                    <button type="button" class="btn btn-outline-success text-start py-3" onclick="changeStatus(0)">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-play me-3 fs-5"></i>
+                            <div class="text-start">
+                                <strong class="d-block">Activate Job</strong>
+                                <small class="text-muted">Make this job visible to candidates</small>
+                            </div>
                         </div>
                     </button>
-                    
-                    <button class="btn btn-outline-warning text-start" onclick="changeStatus('draft')">
-                        <i class="fas fa-pause me-2"></i>
-                        <div>
-                            <strong>Save as Draft</strong>
-                            <p class="text-muted mb-0">Hide job temporarily</p>
+
+                    <!-- Save as Draft → status = 2 -->
+                    <button type="button" class="btn btn-outline-warning text-start py-3" onclick="changeStatus(2)">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-pause me-3 fs-5"></i>
+                            <div class="text-start">
+                                <strong class="d-block">Save as Draft</strong>
+                                <small class="text-muted">Hide job temporarily</small>
+                            </div>
                         </div>
                     </button>
-                    
-                    <button class="btn btn-outline-secondary text-start" onclick="changeStatus('closed')">
-                        <i class="fas fa-stop me-2"></i>
-                        <div>
-                            <strong>Close Job</strong>
-                            <p class="text-muted mb-0">Stop accepting applications</p>
+
+                    <!-- Close Job → status = 1 -->
+                    <button type="button" class="btn btn-outline-secondary text-start py-3" onclick="changeStatus(1)">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-stop me-3 fs-5"></i>
+                            <div class="text-start">
+                                <strong class="d-block">Close Job</strong>
+                                <small class="text-muted">Stop accepting applications</small>
+                            </div>
                         </div>
                     </button>
-                    
-                    <button class="btn btn-outline-primary text-start" onclick="duplicateJob()">
-                        <i class="fas fa-copy me-2"></i>
-                        <div>
-                            <strong>Duplicate Job</strong>
-                            <p class="text-muted mb-0">Create a copy of this job</p>
+
+                    <!-- Duplicate Job -->
+                    <button type="button" class="btn btn-outline-primary text-start py-3" onclick="duplicateJob()">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-copy me-3 fs-5"></i>
+                            <div class="text-start">
+                                <strong class="d-block">Duplicate Job</strong>
+                                <small class="text-muted">Create a copy of this job</small>
+                            </div>
                         </div>
                     </button>
                 </div>
             </div>
+            
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -490,39 +500,107 @@
         // In real app: window.location.href = `/jobs/${jobId}/edit`;
     }
     
-    function showDeleteModal(jobId) {
-    const modalId = `deleteModal${jobId}`;
-    const modal = new bootstrap.Modal(document.getElementById(modalId));
+       
+    // function quickActions(jobId, jobTitle) {
+    //     currentJobId = jobId;
+    //     currentJobTitle = jobTitle;
+    //     document.getElementById('quickActionsTitle').textContent = jobTitle;
+    //     const modal = new bootstrap.Modal(document.getElementById('quickActionsModal'));
+    //     modal.show();
+    // }
+    
+    // function confirmDelete() {
+    //     alert(`Deleting job: "${currentJobTitle}" (ID: ${currentJobId})`);
+    //     // In real app: Send AJAX request to delete job
+    //     bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+    // }
+    
+    // function changeStatus(status) {
+    //     alert(`Changing job "${currentJobTitle}" to ${status} status`);
+    //     // In real app: Send AJAX request to update status
+    //     bootstrap.Modal.getInstance(document.getElementById('quickActionsModal')).hide();
+    // }
+    
+    // function duplicateJob() {
+    //     alert(`Duplicating job: "${currentJobTitle}"`);
+    //     // In real app: Send AJAX request to duplicate job
+    //     bootstrap.Modal.getInstance(document.getElementById('quickActionsModal')).hide();
+    // }
+    // Add these variables at the top (add this line)
+let currentJobId = null;
+let currentJobTitle = null;
+
+// Keep this function but update if needed
+function quickActions(jobId, jobTitle) {
+    currentJobId = jobId;
+    currentJobTitle = jobTitle;
+    document.getElementById('quickActionsTitle').textContent = jobTitle;
+    const modal = new bootstrap.Modal(document.getElementById('quickActionsModal'));
     modal.show();
 }
 
+// REMOVE confirmDelete() function completely - delete it
+
+// REPLACE changeStatus() function with this:
+function changeStatus(status) {
+    const statusMap = {
+        0: 'Activate',
+        1: 'Close', 
+        2: 'Save as Draft'
+    };
     
-    function quickActions(jobId, jobTitle) {
-        currentJobId = jobId;
-        currentJobTitle = jobTitle;
-        document.getElementById('quickActionsTitle').textContent = jobTitle;
-        const modal = new bootstrap.Modal(document.getElementById('quickActionsModal'));
-        modal.show();
+    const actionName = statusMap[status] || 'Update';
+    
+    if (confirm(`Are you sure you want to ${actionName} this job?`)) {
+        fetch(`/vacancies/${currentJobId}/status`, {
+            method: 'PUT',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ status: status })
+        })
+        .then(response => {
+            if (response.ok) {
+                alert(`Job ${actionName.toLowerCase()}d successfully!`);
+                bootstrap.Modal.getInstance(document.getElementById('quickActionsModal')).hide();
+                location.reload();
+            } else {
+                alert('Failed to update job status');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred');
+        });
     }
-    
-    function confirmDelete() {
-        alert(`Deleting job: "${currentJobTitle}" (ID: ${currentJobId})`);
-        // In real app: Send AJAX request to delete job
-        bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+}
+
+// ADD this new function:
+function duplicateJob() {
+    if (confirm(`Duplicate job: "${currentJobTitle}"?`)) {
+        fetch(`/vacancies/${currentJobId}/duplicate`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                alert('Job duplicated successfully!');
+                bootstrap.Modal.getInstance(document.getElementById('quickActionsModal')).hide();
+                location.reload();
+            } else {
+                alert('Failed to duplicate job');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred');
+        });
     }
-    
-    function changeStatus(status) {
-        alert(`Changing job "${currentJobTitle}" to ${status} status`);
-        // In real app: Send AJAX request to update status
-        bootstrap.Modal.getInstance(document.getElementById('quickActionsModal')).hide();
-    }
-    
-    function duplicateJob() {
-        alert(`Duplicating job: "${currentJobTitle}"`);
-        // In real app: Send AJAX request to duplicate job
-        bootstrap.Modal.getInstance(document.getElementById('quickActionsModal')).hide();
-    }
-    
+}
     function createNewJob() {
         alert('Redirecting to create new job page');
         // In real app: window.location.href = '/jobs/create';
@@ -588,4 +666,19 @@
     });
 </script>
 
+
+<script>
+function deleteJob(jobId, jobTitle) {
+    // Update modal text
+    document.getElementById('deleteJobTitle').textContent =
+        `You are about to delete "${jobTitle}"`;
+
+    // Update form action dynamically
+    const form = document.getElementById('deleteForm');
+    form.action = `/jobs/${jobId}`; // MUST match your route
+
+    // Show modal
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+</script>
 @endsection

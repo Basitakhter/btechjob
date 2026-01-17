@@ -29,4 +29,8 @@ Route::get('/jobs', [jobsController::class, 'index'])->name('jobs.index');
 Route::post('/create-company',[jobsController::class,'create_company'])->name('create.company');
 Route::get('/company/{company}/edit', [jobsController::class, 'edit'])->name('company.edit');
 Route::put('/company/{company}', [jobsController::class, 'update'])->name('company.update');
+Route::post('/vacancies/{id}/status', [jobsController::class, 'updateStatus']);
+Route::post('/vacancies/{id}/duplicate', [jobsController::class, 'duplicate']);
+Route::delete('/vacancies/{id}', [jobsController::class, 'destroy']);
+
 });

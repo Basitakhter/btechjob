@@ -1,5 +1,5 @@
 @extends('layouts.header')
-@section('title','Create New Job')
+@section('title','Edit Job')
 @section('content')  <!-- Add this line -->
 <div class="container-fluid">
     <!-- Flash Messages -->
@@ -640,180 +640,13 @@
     <div class="job-container">
         <div class="card">
             <div class="card-header">
-                <h2>Post a New Job</h2>
+                <h2>Edit Your Job</h2>
             </div>
             <div class="card-body">
-                <!-- Step Indicator -->
-                <div class="step-indicator">
-                    <div class="step {{ Auth::user()->company ? 'completed' : 'active' }}" id="step1">
-                        <div class="step-number">1</div>
-                        <div class="step-text">Company</div>
-                        <div class="step-line"></div>
-                    </div>
-                    <div class="step {{ Auth::user()->company ? 'active' : '' }}" id="step2">
-                        <div class="step-number">2</div>
-                        <div class="step-text">Job Details</div>
-                        <div class="step-line"></div>
-                    </div>
-                    <div class="step" id="step3">
-                        <div class="step-number">3</div>
-                        <div class="step-text">Preview & Post</div>
-                    </div>
-                </div>
-                
-                <!-- Company Section (Step 1) - Only show if user doesn't have company -->
-                @if(!Auth::user()->company)
-                <div class="form-section active" id="companySection">
-                    <!-- Company Check -->
-                    <div id="companyCheckArea">
-                        <div class="no-company-card">
-                            <div class="no-company-icon">
-                                <i class="fas fa-building"></i>
-                            </div>
-                            <h3 class="no-company-title">Company Profile Required</h3>
-                            <p class="no-company-text">
-                                Before posting jobs, you need to create a company profile. 
-                                This helps job seekers learn about your organization and builds trust.
-                            </p>
-                            <button class="btn btn-primary" onclick="createNewCompany()">
-                                <i class="fas fa-plus"></i> Create Company Profile
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <!-- Company Form (Hidden by default) -->
-                    <div id="companyForm" style="display: none;">
-                        <div class="form-title">
-                            <i class="fas fa-building me-2"></i>Create Your Company Profile
-                        </div>
-                        
-                        <form id="companyFormData" action="{{ route('create.company') }}" method="POST" enctype="multipart/form-data">
-                            @csrf
-                            <input type="hidden" name="from_job_create" value="1">
-
-                            <div class="form-group">
-                                <label class="form-label">Company Name <span class="required">*</span></label>
-                                <input type="text" class="form-control" name="name" id="companyName" required value="{{ old('name') }}">
-                                @error('name')
-                                    <div class="text-danger mt-1">{{ $message }}</div>
-                                @enderror
-                            </div>
-                            
-                            <div class="form-group">
-                                <label class="form-label">Company Logo</label>
-                                <div style="border: 2px dashed var(--gray-300); border-radius: 8px; padding: 20px; text-align: center;">
-                                    <div class="company-logo mx-auto mb-3" id="logoPreview" style="width: 100px; height: 100px;">
-                                        <i class="fas fa-building"></i>
-                                    </div>
-                                    <p>Drag and drop your logo or</p>
-                                    <input type="file" id="logoUpload" name="logo" class="d-none" accept="image/*" onchange="previewLogo(event)">
-                                    <button type="button" class="btn btn-secondary" onclick="document.getElementById('logoUpload').click()">
-                                        <i class="fas fa-upload"></i> Upload Logo
-                                    </button>
-                                    <p class="text-muted mt-2">Recommended: 400x400px, PNG or JPG (Max 2MB)</p>
-                                    @error('logo')
-                                        <div class="text-danger mt-1">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label class="form-label">Company Tagline</label>
-                                <input type="text" class="form-control" id="companyTagline" name="company_tagline" placeholder="Brief description of your company" value="{{ old('company_tagline') }}">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label class="form-label">Company Description <span class="required">*</span></label>
-                                <textarea class="form-control" id="companyDescription" name="description" rows="4" required placeholder="Tell us about your company">{{ old('description') }}</textarea>
-                                @error('description')
-                                    <div class="text-danger mt-1">{{ $message }}</div>
-                                @enderror
-                            </div>
-                            
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label class="form-label">Industry <span class="required">*</span></label>
-                                    <select class="form-select" name="industry" id="companyIndustry" required>
-                                        <option value="">Select Industry</option>
-                                        <option value="Technology" {{ old('industry') == 'Technology' ? 'selected' : '' }}>Technology</option>
-                                        <option value="Finance" {{ old('industry') == 'Finance' ? 'selected' : '' }}>Finance</option>
-                                        <option value="Healthcare" {{ old('industry') == 'Healthcare' ? 'selected' : '' }}>Healthcare</option>
-                                        <option value="Education" {{ old('industry') == 'Education' ? 'selected' : '' }}>Education</option>
-                                        <option value="Retail" {{ old('industry') == 'Retail' ? 'selected' : '' }}>Retail</option>
-                                        <option value="Manufacturing" {{ old('industry') == 'Manufacturing' ? 'selected' : '' }}>Manufacturing</option>
-                                        <option value="Real Estate" {{ old('industry') == 'Real Estate' ? 'selected' : '' }}>Real Estate</option>
-                                        <option value="Hospitality" {{ old('industry') == 'Hospitality' ? 'selected' : '' }}>Hospitality</option>
-                                        <option value="Other" {{ old('industry') == 'Other' ? 'selected' : '' }}>Other</option>
-                                    </select>
-                                    @error('industry')
-                                        <div class="text-danger mt-1">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Company Size <span class="required">*</span></label>
-                                    <select class="form-select" name="size" id="companySize" required>
-                                        <option value="">Select Size</option>
-                                        <option value="1-10" {{ old('size') == '1-10' ? 'selected' : '' }}>1-10 employees</option>
-                                        <option value="11-50" {{ old('size') == '11-50' ? 'selected' : '' }}>11-50 employees</option>
-                                        <option value="51-200" {{ old('size') == '51-200' ? 'selected' : '' }}>51-200 employees</option>
-                                        <option value="201-500" {{ old('size') == '201-500' ? 'selected' : '' }}>201-500 employees</option>
-                                        <option value="501-1000" {{ old('size') == '501-1000' ? 'selected' : '' }}>501-1000 employees</option>
-                                        <option value="1000+" {{ old('size') == '1000+' ? 'selected' : '' }}>1000+ employees</option>
-                                    </select>
-                                    @error('size')
-                                        <div class="text-danger mt-1">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label class="form-label">Website</label>
-                                <input type="url" class="form-control" id="companyWebsite" name="website" placeholder="https://example.com" value="{{ old('website') }}">
-                                @error('website')
-                                    <div class="text-danger mt-1">{{ $message }}</div>
-                                @enderror
-                            </div>
-                            
-                            <div class="form-group">
-                                <label class="form-label">Location <span class="required">*</span></label>
-                                <input type="text" class="form-control" id="companyLocation" name="location" required placeholder="City, Country" value="{{ old('location') }}">
-                                @error('location')
-                                    <div class="text-danger mt-1">{{ $message }}</div>
-                                @enderror
-                            </div>
-                            
-                            <div class="form-group">
-                                <label class="form-label">Contact Email <span class="required">*</span></label>
-                                <input type="email" class="form-control" name="email" id="companyEmail" required value="{{ old('email', Auth::user()->email) }}">
-                                @error('email')
-                                    <div class="text-danger mt-1">{{ $message }}</div>
-                                @enderror
-                            </div>
-                            
-                            <div class="form-group">
-                                <label class="form-label">Contact Phone</label>
-                                <input type="tel" class="form-control" name="contact" id="companyPhone" value="{{ old('contact') }}">
-                                @error('contact')
-                                    <div class="text-danger mt-1">{{ $message }}</div>
-                                @enderror
-                            </div>
-                            
-                            <div class="form-actions">
-                                <button type="button" class="btn btn-secondary" onclick="cancelCompany()">Cancel</button>
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-save"></i> Save Company & Continue
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-                @endif
-
-                <!-- Job Details Section (Step 2) - Show if user has company -->
                 <div class="form-section {{ Auth::user()->company ? 'active' : '' }}" id="jobDetailsSection">
                     <div class="form-title">
-                        <i class="fas fa-briefcase me-2"></i>Job Details
-                    </div>
+                        <i class="fas fa-briefcase me-2"></i> {{ $vacancy->job_title }}</H3>
+                        </div>
                     
                     @if(Auth::user()->company)
                     <div class="company-exists">
@@ -844,11 +677,12 @@
                     </div>
                     @endif
                     
-                    <form id="jobForm" action="{{ route('jobs.store') }}" method="POST">
+                    <form id="jobForm" action="{{ route('jobs.update',$vacancy->id) }}" method="POST">
                         @csrf
+                        @method("PATCH")
                         <div class="form-group">
                             <label class="form-label">Job Title <span class="required">*</span></label>
-                            <input type="text" class="form-control" name="job_title" id="jobTitle" required placeholder="e.g., Senior Software Engineer" value="{{ old('job_title') }}">
+                            <input type="text" class="form-control" name="job_title" id="jobTitle" required placeholder="e.g., Senior Software Engineer" value="{{ $vacancy->job_title }}">
                             @error('job_title')
                                 <div class="text-danger mt-1">{{ $message }}</div>
                             @enderror
@@ -859,11 +693,11 @@
                             <div class="form-row">
                                 <select class="form-select" name="job_type" id="jobType" required>
                                     <option value="">Select Type</option>
-                                    <option value="Full-time" {{ old('job_type') == 'Full-time' ? 'selected' : '' }}>Full-time</option>
-                                    <option value="Part-time" {{ old('job_type') == 'Part-time' ? 'selected' : '' }}>Part-time</option>
-                                    <option value="Contract" {{ old('job_type') == 'Contract' ? 'selected' : '' }}>Contract</option>
-                                    <option value="Internship" {{ old('job_type') == 'Internship' ? 'selected' : '' }}>Internship</option>
-                                    <option value="Remote" {{ old('job_type') == 'Remote' ? 'selected' : '' }}>Remote</option>
+                                    <option value="Full-time" {{ $vacancy->job_type == 'Full-time' ? 'selected' : '' }}>Full-time</option>
+                                    <option value="Part-time" {{ $vacancy->job_type == 'Part-time' ? 'selected' : '' }}>Part-time</option>
+                                    <option value="Contract" {{ $vacancy->job_type == 'Contract' ? 'selected' : '' }}>Contract</option>
+                                    <option value="Internship" {{ $vacancy->job_type == 'Internship' ? 'selected' : '' }}>Internship</option>
+                                    <option value="Remote" {{ $vacancy->job_type == 'Remote' ? 'selected' : '' }}>Remote</option>
                                 </select>
                                 @error('job_type')
                                     <div class="text-danger mt-1">{{ $message }}</div>
@@ -871,11 +705,11 @@
                                 
                                 <select class="form-select" name="experience" id="jobExperience" required>
                                     <option value="">Experience Level</option>
-                                    <option value="Entry Level" {{ old('experience') == 'Entry Level' ? 'selected' : '' }}>Entry Level</option>
-                                    <option value="Mid Level" {{ old('experience') == 'Mid Level' ? 'selected' : '' }}>Mid Level</option>
-                                    <option value="Senior Level" {{ old('experience') == 'Senior Level' ? 'selected' : '' }}>Senior Level</option>
-                                    <option value="Lead" {{ old('experience') == 'Lead' ? 'selected' : '' }}>Lead</option>
-                                    <option value="Director" {{ old('experience') == 'Director' ? 'selected' : '' }}>Director</option>
+                                    <option value="Entry Level" {{ $vacancy->experience == 'Entry Level' ? 'selected' : '' }}>Entry Level</option>
+                                    <option value="Mid Level" {{ $vacancy->experience == 'Mid Level' ? 'selected' : '' }}>Mid Level</option>
+                                    <option value="Senior Level" {{ $vacancy->experience == 'Senior Level' ? 'selected' : '' }}>Senior Level</option>
+                                    <option value="Lead" {{ $vacancy->experience == 'Lead' ? 'selected' : '' }}>Lead</option>
+                                    <option value="Director" {{ $vacancy->experience == 'Director' ? 'selected' : '' }}>Director</option>
                                 </select>
                                 @error('experience')
                                     <div class="text-danger mt-1">{{ $message }}</div>
@@ -885,7 +719,7 @@
                         
                         <div class="form-group">
                             <label class="form-label">Job Description <span class="required">*</span></label>
-                            <textarea class="form-control" id="jobDescription" name="description" rows="6" required placeholder="Describe the role, responsibilities, and expectations">{{ old('description') }}</textarea>
+                            <textarea class="form-control" id="jobDescription" name="job_description" rows="6" required placeholder="Describe the role, responsibilities, and expectations">{{ $vacancy->job_description }}</textarea>
                             @error('description')
                                 <div class="text-danger mt-1">{{ $message }}</div>
                             @enderror
@@ -900,7 +734,7 @@
                             </label>
                             <textarea class="form-control" id="jobRequirements" name="requirements" rows="4" required placeholder="• Minimum 3 years of experience
 • Proficiency in JavaScript
-• Strong communication skills">{{ old('requirements') }}</textarea>
+• Strong communication skills">{{ $vacancy->requirements }}</textarea>
                             @error('requirements')
                                 <div class="text-danger mt-1">{{ $message }}</div>
                             @enderror
@@ -908,16 +742,16 @@
                         
                         <div class="form-row">
                             <div class="form-group">
-                                <label class="form-label">Salary Range (per year)</label>
+                                <label class="form-label" name="salary_range" {{ $vacancy->salary_range }}>Salary Range (per year)</label>
                                 <div class="form-row">
-                                    <input type="number" class="form-control" name="salary_min" id="salaryMin" placeholder="Min" min="0" value="{{ old('salary_min') }}">
-                                    <input type="number" class="form-control" name="salary_max" id="salaryMax" placeholder="Max" min="0" value="{{ old('salary_max') }}">
+                                    <input type="number" class="form-control" name="salary_min" id="salaryMin" placeholder="Min" min="0" value="{{ $vacancy->salary_min }}">
+                                    <input type="number" class="form-control" name="salary_max" id="salaryMax" placeholder="Max" min="0" value="{{ $vacancy->salary_max }}">
                                     <select class="form-select" name="salary_currency" id="salaryCurrency">
-                                        <option value="USD" {{ old('salary_currency') == 'USD' ? 'selected' : '' }}>USD</option>
-                                        <option value="EUR" {{ old('salary_currency') == 'EUR' ? 'selected' : '' }}>EUR</option>
-                                        <option value="GBP" {{ old('salary_currency') == 'GBP' ? 'selected' : '' }}>GBP</option>
-                                        <option value="INR" {{ old('salary_currency') == 'INR' ? 'selected' : '' }}>INR</option>
-                                        <option value="PKR" {{ old('salary_currency') == 'PKR' ? 'selected' : '' }}>PKR</option>
+                                        <option value="USD" {{ $vacancy->salary_currency == 'USD' ? 'selected' : '' }}>USD</option>
+                                        <option value="EUR" {{ $vacancy->salary_currency == 'EUR' ? 'selected' : '' }}>EUR</option>
+                                        <option value="GBP" {{ $vacancy->salary_currency == 'GBP' ? 'selected' : '' }}>GBP</option>
+                                        <option value="INR" {{ $vacancy->salary_currency == 'INR' ? 'selected' : '' }}>INR</option>
+                                        <option value="PKR" {{ $vacancy->salary_currency == 'PKR' ? 'selected' : '' }}>PKR</option>
                                     </select>
                                 </div>
                             </div>
@@ -926,7 +760,7 @@
                         <div class="form-row">
                             <div class="form-group">
                                 <label class="form-label">Location <span class="required">*</span></label>
-                                <input type="text" class="form-control" name="location" id="jobLocation" required value="{{ old('location', Auth::user()->company ? Auth::user()->company->location : '') }}">
+                                <input type="text" class="form-control" name="location" id="jobLocation" required value="{{ $vacancy->location }}">
                                 @error('location')
                                     <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
@@ -934,9 +768,9 @@
                             <div class="form-group">
                                 <label class="form-label">Work Setup</label>
                                 <select class="form-select" name="work_setup" id="workSetup">
-                                    <option value="On-site" {{ old('work_setup') == 'On-site' ? 'selected' : '' }}>On-site</option>
-                                    <option value="Remote" {{ old('work_setup') == 'Remote' ? 'selected' : '' }}>Remote</option>
-                                    <option value="Hybrid" {{ old('work_setup') == 'Hybrid' ? 'selected' : '' }}>Hybrid</option>
+                                    <option value="On-site" {{ $vacancy->work_setup == 'On-site' ? 'selected' : '' }}>On-site</option>
+                                    <option value="Remote" {{ $vacancy->work_setup == 'Remote' ? 'selected' : '' }}>Remote</option>
+                                    <option value="Hybrid" {{ $vacancy->work_setup == 'Hybrid' ? 'selected' : '' }}>Hybrid</option>
                                 </select>
                                 @error('work_setup')
                                     <div class="text-danger mt-1">{{ $message }}</div>
@@ -947,14 +781,14 @@
                         <div class="form-row">
                             <div class="form-group">
                                 <label class="form-label">Application Deadline</label>
-                                <input type="date" class="form-control" name="application_deadline" id="applicationDeadline" value="{{ old('application_deadline') }}">
+                                <input type="date" class="form-control" name="application_deadline" id="applicationDeadline" value="{{ $vacancy->application_deadline }}">
                                 @error('application_deadline')
                                     <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Number of Vacancies</label>
-                                <input type="number" class="form-control" name="vacancies" id="vacancies" min="1" value="{{ old('vacancies', 1) }}">
+                                <input type="number" class="form-control" name="vacancies" id="vacancies" min="1" value="{{ $vacancy->vacancies }}">
                                 @error('vacancies')
                                     <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
@@ -971,7 +805,7 @@
                             <textarea class="form-control" id="jobBenefits" rows="3" name="benefits" placeholder="• Health insurance
 • Flexible work hours
 • Professional development
-• Paid time off">{{ old('benefits') }}</textarea>
+• Paid time off">{{ $vacancy->benefits }}</textarea>
                             @error('benefits')
                                 <div class="text-danger mt-1">{{ $message }}</div>
                             @enderror
@@ -979,12 +813,27 @@
                         
                         <div class="form-group">
                             <label class="form-label">Application Instructions</label>
-                            <textarea class="form-control" id="applicationInstructions" rows="3" name="instructions" placeholder="How should candidates apply?">{{ old('instructions') }}</textarea>
+                            <textarea class="form-control" id="applicationInstructions" rows="3" name="instructions" placeholder="How should candidates apply?">{{ $vacancy->instructions }}</textarea>
                             @error('instructions')
                                 <div class="text-danger mt-1">{{ $message }}</div>
                             @enderror
                         </div>
-                        
+                        <div class="row">
+             <div class="col-md-12 mb-3">
+                <div class="input-group">
+                    <span class="input-group-text">@if($vacancy->status == 0) <i class="fa fa-check-circle text-success"></i> @else <i class="fa fa-check-circle text-danger"></i> @endif</span>
+                    <select class="form-control @error('status') is-invalid @enderror" name="status">
+                        <option value="0" {{ $vacancy->status == 0 ? 'selected' : '' }}>Active</option>
+                        <option value="1" {{ $vacancy->status == 1 ? 'selected' : '' }}>Closed</option>
+                    </select>
+                </div>
+                @error('status')
+                    <div class="invalid-feedback d-block">
+                        <i class="fa fa-exclamation-circle me-1"></i> {{ $message }}
+                    </div>
+                @enderror
+            </div>
+        </div>
                         <div class="form-actions">
                             @if(!Auth::user()->company)
                             <button type="button" class="btn btn-secondary" onclick="previousStep()">

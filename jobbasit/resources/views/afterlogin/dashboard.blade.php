@@ -1,6 +1,7 @@
 @extends('layouts.header')
 @section('title','Dashboard')
 @section('content')
+<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
 <div class="dashboard-container">
     <div class="header">
         <h1>Dashboard Overview</h1>
@@ -270,7 +271,7 @@
     }
 </style>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+
 <script>
     // Sample data for regular user
     const regularUserStats = [

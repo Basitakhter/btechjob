@@ -36,7 +36,7 @@ class jobscontroller extends Controller
 {
     \Log::info('Job store method called', ['request' => $request->all()]);
     
-    $validated = $request->validate([
+        $validated = $request->validate([
         'job_title' => 'required|string|max:255',
         'job_type' => 'required|string|in:Full-time,Part-time,Contract,Internship,Remote',
         'experience' => 'required|string|in:Entry Level,Mid Level,Senior Level,Lead,Director',
@@ -153,6 +153,8 @@ class jobscontroller extends Controller
     public function show(string $id)
     {
         //
+        $vacancy = vacancy::find($id);
+        return view('afterlogin.jobs.show', compact('vacancy'));
     }
 
     /**
@@ -161,6 +163,8 @@ class jobscontroller extends Controller
     public function edit(string $id)
     {
         //
+        $vacancy = vacancy::find($id);
+        return view('afterlogin.jobs.edit',compact('vacancy'));
     }
 
     /**
@@ -169,6 +173,74 @@ class jobscontroller extends Controller
     public function update(Request $request, string $id)
     {
         //
+        // Validate data
+    $validated = $request->validate([
+        'job_title' => 'required|string|max:255',
+        'job_type' => 'required|string|in:Full-time,Part-time,Contract,Internship,Remote',
+        'experience' => 'required|string|in:Entry Level,Mid Level,Senior Level,Lead,Director',
+        'job_description' => 'required|string|min:50|max:5000',
+        'requirements' => 'required|string|min:20|max:2000',
+        'salary_min' => 'nullable|numeric',
+        'salary_max' => 'nullable|numeric',
+        'salary_currency' => 'nullable|string|size:3',
+        'location' => 'required|string|max:255',
+        'work_setup' => 'required|string|in:On-site,Remote,Hybrid',
+        'application_deadline' => 'nullable|date|after_or_equal:today',
+        'vacancies' => 'required|integer|min:1|max:1000',
+        'benefits' => 'nullable|string|max:2000',
+        'instructions' => 'nullable|string|max:2000',
+        'status' => 'nullable|integer|in:0,1,2' // Active, Closed, Draft (if using)
+    ]);
+
+    \Log::info('Validation passed', $validated);
+
+    // Build salary range
+    $salaryRange = null;
+    if ($request->filled(['salary_min', 'salary_max', 'salary_currency'])) {
+        $salaryRange = "{$request->salary_min}-{$request->salary_max} {$request->salary_currency}";
+    }
+
+    try {
+        // Find existing vacancy
+        $vacancy = Vacancy::findOrFail($id);
+
+        // Update fields
+        $vacancy->user_id = Auth::id();
+        $vacancy->company_id = Auth::user()->company->id;
+        $vacancy->job_title = $validated['job_title'];
+        $vacancy->job_type = $validated['job_type'];
+        $vacancy->experience = $validated['experience'];
+        $vacancy->job_description = $validated['job_description'];
+        $vacancy->requirements = $validated['requirements'];
+        $vacancy->salary_range = $salaryRange;
+        $vacancy->location = $validated['location'];
+        $vacancy->work_setup = $validated['work_setup'];
+        $vacancy->application_deadline = $validated['application_deadline'];
+        $vacancy->vacancies = $validated['vacancies'];
+        $vacancy->benefits = $validated['benefits'] ?? null;
+        $vacancy->instructions = $validated['instructions'] ?? null;
+        $vacancy->status = $validated['status'] ?? $vacancy->status; // Keep old if not provided
+
+        \Log::info('Attempting to update vacancy', $vacancy->toArray());
+
+        $vacancy->save();
+
+        \Log::info('Vacancy updated successfully', ['id' => $vacancy->id]);
+
+        return redirect()->route('jobs.index')->with([
+            'success' => 'Job Updated Successfully',
+            'alert-type' => 'success'
+        ]);
+
+    } catch (\Exception $e) {
+        \Log::error('Error updating vacancy', ['error' => $e->getMessage()]);
+
+        return redirect()->back()->with([
+            'error' => 'Something went wrong while updating the job.',
+            'alert-type' => 'error'
+        ]);
+    }
+        
     }
 
     /**

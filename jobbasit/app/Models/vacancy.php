@@ -9,11 +9,17 @@ class vacancy extends Model
     //
     public function user()
     {
-        return $this->belongs(user::class);
+        return $this->belongsTo(user::class);
     }
     //
     public function company()
     {
-        return $this->belongs(company::class);
+        return $this->belongsTo(company::class);
     }
+    //
+    public function applicants()
+    {
+        return $this->hasMany(applicant::class);
+    }
+
 }
